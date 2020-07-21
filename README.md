@@ -52,3 +52,20 @@ func _UserManager_ListUsers_HTTP_Handler(srv UserManagerServer) http.Handler {
 }
 ```
 
+Then, generated HTTP handler can be used in your application with HTTP server:
+
+```
+router := mux.NewRouter()
+
+router.PathPrefix("/users").
+	Handler(userspb.NewUserManagerHandler(users.NewServer(db.DB)))
+
+srv := &http.Server{
+	Addr:    ":8080",
+	Handler: router,
+}
+
+if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	log.Fatal("HTTP api has failed:", err)
+}
+```
