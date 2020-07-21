@@ -13,7 +13,7 @@ Only few basic features of Google API HTTP annotations are supported at the mome
 ## Installation
 
 ```
-go get github.com/eolymp/go-proto-http/cmd/protoc-gen-go-http
+go install github.com/eolymp/go-proto-http/cmd/protoc-gen-go-http
 ```
 
 ## Usage
