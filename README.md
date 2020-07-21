@@ -5,9 +5,9 @@ It uses Google API HTTP protobuf extension to resolve HTTP parameters (path, met
 
 Only few basic features of Google API HTTP annotations are supported at the moment:
 
-- Request body parsing (only `body='*'` and no body)
-- URL parameters (`get=/users/{user_id}/comments/{comment_id}`)
 - All HTTP methods including custom
+- Simple URL parameters for example `get=/users/{user_id}/comments/{comment_id}`
+- Simple request body parsing (no body, `body='*'` and `body='argument_name'`)
 - GRPC to HTTP status code mapping
 
 ## Installation

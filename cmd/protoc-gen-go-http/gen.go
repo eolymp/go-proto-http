@@ -156,16 +156,38 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 			g.P("func ", handler, "(srv ", service.GoName, "Server) ", httpPackage.Ident("Handler"), " {")
 			g.P("    return ", httpPackage.Ident("HandlerFunc"), "(func(w ", httpPackage.Ident("ResponseWriter"), ", r *", httpPackage.Ident("Request"), ") {")
 			g.P("		in := &", method.Input.GoIdent, "{}")
-			g.P()
 
-			if binding.RequestBody == "*" {
+			// populate input from request body
+			switch binding.RequestBody {
+			case "":
+				// request body is not used
+
+			case "*":
+				// request body represents all arguments
+				g.P()
 				g.P("		if err := _", service.GoName, "_HTTPReadRequestBody(r, in); err != nil {")
 				g.P("			_", service.GoName, "_HTTPWriteErrorResponse(w, err)")
 				g.P("			return")
 				g.P("		}")
+
+			default:
+				// request body represents one of the arguments
+				field, ok := getMessageField(method.Input, binding.RequestBody)
+				if !ok {
+					panic(fmt.Errorf("unable to resolve field %#v in %#v", binding.RequestBody, method.Input.Desc.FullName()))
+				}
+
 				g.P()
+				g.P("       in.", field.GoName, " = &", field.Message.GoIdent, "{}")
+				g.P("		if err := _", service.GoName, "_HTTPReadRequestBody(r, in.", field.GoName, "); err != nil {")
+				g.P("			_", service.GoName, "_HTTPWriteErrorResponse(w, err)")
+				g.P("			return")
+				g.P("		}")
 			}
 
+			g.P()
+
+			// populate input from URL parameters
 			if len(binding.Parameters) != 0 {
 				g.P("		vars := ", muxPackage.Ident("Vars"), "(r)")
 				for _, name := range binding.Parameters {
@@ -180,6 +202,7 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 				g.P()
 			}
 
+			// call server method and write response
 			g.P("		out, err := srv.", method.GoName, "(r.Context(), in)")
 			g.P("		if err != nil {")
 			g.P("			_", service.GoName, "_HTTPWriteErrorResponse(w, err)")
