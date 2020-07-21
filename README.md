@@ -1,4 +1,4 @@
-# go-proto-http
+# protoc-gen-go-http
 
 This protobuf code generator generates Go HTTP bindings for RPC services defined in `.proto` files. 
 It uses Google API HTTP protobuf extension to resolve HTTP parameters (path, method etc) for each method and creates Go `http.Handler` to apply routing, marshalling and unmarshalling.
