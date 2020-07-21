@@ -54,7 +54,7 @@ func _UserManager_ListUsers_HTTP_Handler(srv UserManagerServer) http.Handler {
 
 Then, generated HTTP handler can be used in your application with HTTP server:
 
-```
+```go
 router := mux.NewRouter()
 
 router.PathPrefix("/users").
