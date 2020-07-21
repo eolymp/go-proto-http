@@ -8,6 +8,7 @@ Only few basic features of Google API HTTP annotations are supported at the mome
 - Request body parsing (only `body='*'` and no body)
 - URL parameters (`get=/users/{user_id}/comments/{comment_id}`)
 - All HTTP methods including custom
+- GRPC to HTTP status code mapping
 
 ## Installation
 
