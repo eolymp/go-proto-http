@@ -10,6 +10,10 @@ Only few basic features of Google API HTTP annotations are supported at the mome
 - Simple request body parsing (no body, `body='*'` and `body='argument_name'`)
 - GRPC to HTTP status code mapping
 
+This code generator does not intend to generate perfect RESTful API (use all of the Status Codes, Headers, Query parameters, Content Type Negotiation etc). 
+The idea of this code generator is to provide "good enough" HTTP API on backed by the very same server implementation used by GRPC server, so you can have one 
+server implementation and multiple network bindings.  
+
 ## Installation
 
 ```
@@ -48,7 +52,7 @@ service UserManager {
 }
 ```
 
-From annotations in this file `protoc-gen-go-http` will generate an `http.Handler` which would handler routing (using mux package) and converting http.Request into corresponding protobuf data structures. 
+From annotations in this file `protoc-gen-go-http` will generate an `http.Handler` which would handler routing (using mux package) and converting `http.Request` into corresponding protobuf data structures. 
 
 Generated code looks something like this:
 
