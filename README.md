@@ -24,6 +24,32 @@ Just like with any other code generator you need to run `protoc` with `go-http_o
 protoc --go_out=build  --go-grpc_out=build --go-http_out=build your.proto
 ```
 
+> You can find full example in [`/example`](/example) folder
+
+Let's say we have proto file which defines following `UserManager` service:
+
+```proto
+service UserManager {
+    rpc CreateUser (CreateUserInput) returns (CreateUserOutput) {
+        option (google.api.http) = { post: "/users" body: "*" };
+    }
+
+    rpc DeleteUser (DeleteUserInput) returns (DeleteUserOutput) {
+        option (google.api.http) = { delete: "/users/{user_id}" };
+    }
+
+    rpc GetComments (GetCommentsInput) returns (GetCommentsOutput) {
+        option (google.api.http) = { get: "/users/{user_id}/comments" };
+    }
+
+    rpc CreateComment (CreateCommentInput) returns (CreateCommentOutput) {
+        option (google.api.http) = { post: "/users/{user_id}/comments" body: "comment" };
+    }
+}
+```
+
+From annotations in this file `protoc-gen-go-http` will generate an `http.Handler` which would handler routing (using mux package) and converting http.Request into corresponding protobuf data structures. 
+
 Generated code looks something like this:
 
 ```go
@@ -32,21 +58,29 @@ Generated code looks something like this:
 // NewUserManagerHandler constructs new http.Handler for UserManagerServer
 func NewUserManagerHandler(srv UserManagerServer) http.Handler {
 	router := mux.NewRouter()
-	router.Handle("/users", _UserManager_ListUsers_HTTP_Handler(srv)).Methods("GET")
-
+	router.Handle("/users", _UserManager_CreateUser_HTTP_Handler(srv)).Methods("POST")
+	router.Handle("/users/{user_id}", _UserManager_DeleteUser_HTTP_Handler(srv)).Methods("DELETE")
+	router.Handle("/users/{user_id}/comments", _UserManager_GetComments_HTTP_Handler(srv)).Methods("GET")
+	router.Handle("/users/{user_id}/comments", _UserManager_CreateComment_HTTP_Handler(srv)).Methods("POST")
 	return router
 }
 
-func _UserManager_ListUsers_HTTP_Handler(srv UserManagerServer) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		in := &ListUsersInput{}
+// ...
 
-		if err := _UserManager_HTTPReadRequestBody(r, in); err != nil {
+func _UserManager_CreateComment_HTTP_Handler(srv UserManagerServer) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		in := &CreateCommentInput{}
+
+		in.Comment = &Comment{}
+		if err := _UserManager_HTTPReadRequestBody(r, in.Comment); err != nil {
 			_UserManager_HTTPWriteErrorResponse(w, err)
 			return
 		}
 
-		out, err := srv.ListUsers(r.Context(), in)
+		vars := mux.Vars(r)
+		in.UserId = vars["user_id"]
+
+		out, err := srv.CreateComment(r.Context(), in)
 		if err != nil {
 			_UserManager_HTTPWriteErrorResponse(w, err)
 			return

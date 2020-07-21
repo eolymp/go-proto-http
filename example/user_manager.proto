@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/eolymp/api/pkg/compete;compete";
+
+service UserManager {
+    rpc CreateUser (CreateUserInput) returns (CreateUserOutput) {
+        option (google.api.http) = { post: "/users" body: "*" };
+    }
+
+    rpc DeleteUser (DeleteUserInput) returns (DeleteUserOutput) {
+        option (google.api.http) = { delete: "/users/{user_id}" };
+    }
+
+    rpc GetComments (GetCommentsInput) returns (GetCommentsOutput) {
+        option (google.api.http) = { get: "/users/{user_id}/comments" };
+    }
+
+    rpc CreateComment (CreateCommentInput) returns (CreateCommentOutput) {
+        option (google.api.http) = { post: "/users/{user_id}/comments" body: "comment" };
+    }
+}
+
+message CreateUserInput {
+    string username = 1;
+    string email = 2;
+}
+
+message CreateUserOutput {
+    string id = 1;
+}
+
+message DeleteUserInput {
+    string user_id = 1;
+}
+
+message DeleteUserOutput {
+}
+
+message GetCommentsInput {
+    string user_id = 1;
+}
+
+message GetCommentsOutput {
+    repeated Comment comments = 1;
+}
+
+message CreateCommentInput {
+    string user_id = 1;
+    Comment comment = 2;
+}
+
+message CreateCommentOutput {
+    string comment_id = 1;
+}
+
+message Comment {
+    string title = 1;
+    string content = 2;
+}
