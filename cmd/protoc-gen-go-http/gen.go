@@ -133,7 +133,7 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 			}
 
 			if len(binding.Parameters) != 0 {
-				g.P("		vars := ", muxPackage.Ident("Vars"), "(ctx)")
+				g.P("		vars := ", muxPackage.Ident("Vars"), "(r)")
 				for _, name := range binding.Parameters {
 					field, ok := getMessageField(method.Input, name)
 					if !ok {
