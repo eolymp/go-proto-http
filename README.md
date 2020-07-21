@@ -3,7 +3,11 @@
 This protobuf code generator generates Go HTTP bindings for RPC services defined in `.proto` files. 
 It uses Google API HTTP protobuf extension to resolve HTTP parameters (path, method etc) for each method and creates Go `http.Handler` to apply routing, marshalling and unmarshalling.
 
-Only few basic features of Google API HTTP annotations are supported at the moment.
+Only few basic features of Google API HTTP annotations are supported at the moment:
+
+- Request body parsing (only `body='*'` and no body)
+- URL parameters (`get=/users/{user_id}/comments/{comment_id}`)
+- All HTTP methods including custom
 
 ## Installation
 
