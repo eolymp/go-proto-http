@@ -6,6 +6,7 @@ package compete
 import (
 	json "encoding/json"
 	mux "github.com/gorilla/mux"
+	schema "github.com/gorilla/schema"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 	protojson "google.golang.org/protobuf/encoding/protojson"
@@ -14,7 +15,7 @@ import (
 	http "net/http"
 )
 
-// _UserManager_HTTPReadRequestBody parses body to proto.Message
+// _UserManager_HTTPReadRequestBody parses body into proto.Message
 func _UserManager_HTTPReadRequestBody(r *http.Request, v proto.Message) error {
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -152,8 +153,29 @@ func _UserManager_DeleteUser_HTTP_Handler(srv UserManagerServer) http.Handler {
 }
 
 func _UserManager_GetComments_HTTP_Handler(srv UserManagerServer) http.Handler {
+	type query struct {
+		Offset int32  `schema:"offset"`
+		Size   int32  `schema:"size"`
+		Sort   string `schema:"sort"`
+		Order  string `schema:"order"`
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		in := &GetCommentsInput{}
+
+		decoder := schema.NewDecoder()
+		decoder.IgnoreUnknownKeys(true)
+
+		q := &query{}
+		if err := decoder.Decode(q, r.URL.Query()); err != nil {
+			_UserManager_HTTPWriteErrorResponse(w, err)
+			return
+		}
+
+		in.Offset = q.Offset
+		in.Size = q.Size
+		in.Sort = q.Sort
+		in.Order = q.Order
 
 		vars := mux.Vars(r)
 		in.UserId = vars["user_id"]

@@ -8,6 +8,7 @@ Only few basic features of Google API HTTP annotations are supported at the mome
 - All HTTP methods including custom
 - Simple URL parameters for example `get=/users/{user_id}/comments/{comment_id}`
 - Simple request body parsing (no body, `body='*'` and `body='argument_name'`)
+- Basic query parameters of type: string, int, float
 - GRPC to HTTP status code mapping
 
 This code generator does not intend to generate perfect RESTful API (use all of the Status Codes, Headers, Query parameters, Content Type Negotiation etc). 

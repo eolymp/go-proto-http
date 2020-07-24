@@ -6,10 +6,11 @@ import (
 	"github.com/golang/protobuf/proto"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/types/descriptorpb"
+	"net/http"
 	"strings"
 )
 
-func getHTTPRuleAnnotation(method *protogen.Method) (*annotations.HttpRule, bool) {
+func getAnnotation(method *protogen.Method) (*annotations.HttpRule, bool) {
 	opts, ok := method.Desc.Options().(*descriptorpb.MethodOptions)
 	if !ok {
 		return nil, false
@@ -28,68 +29,52 @@ func getHTTPRuleAnnotation(method *protogen.Method) (*annotations.HttpRule, bool
 	return rule, true
 }
 
-type httpBinding struct {
-	Method      string
-	Path        string
-	Parameters  []string
-	RequestBody string
+type Binding struct {
+	Method          string   // HTTP method to use
+	Path            string   // Path template (following mux package template format
+	PathParameters  []string // List of Path parameters (these coming from Path template)
+	QueryParameters []string // List of Query parameters
+	RequestBody     string   // Name of the field used for request body, or empty if no body is expected, or "*" if whole input is in body
 }
 
-func getHTTPBindings(method *protogen.Method) []httpBinding {
-	annotation, ok := getHTTPRuleAnnotation(method)
+// getBindings for a given Mathod
+// @todo: should also extract additionalBindings
+func getBindings(desc *protogen.Method) []Binding {
+	annotation, ok := getAnnotation(desc)
 	if !ok {
 		return nil
 	}
 
+	var method, path string
+
 	switch p := annotation.Pattern.(type) {
 	case *annotations.HttpRule_Get:
-		return []httpBinding{{
-			Method:      "GET",
-			Path:        p.Get,
-			RequestBody: annotation.Body,
-			Parameters:  getURLParameters(p.Get),
-		}}
+		method, path = http.MethodGet, p.Get
 	case *annotations.HttpRule_Put:
-		return []httpBinding{{
-			Method:      "PUT",
-			Path:        p.Put,
-			RequestBody: annotation.Body,
-			Parameters:  getURLParameters(p.Put),
-		}}
+		method, path = http.MethodPut, p.Put
 	case *annotations.HttpRule_Post:
-		return []httpBinding{{
-			Method:      "POST",
-			Path:        p.Post,
-			RequestBody: annotation.Body,
-			Parameters:  getURLParameters(p.Post),
-		}}
+		method, path = http.MethodPost, p.Post
 	case *annotations.HttpRule_Patch:
-		return []httpBinding{{
-			Method:      "PATCH",
-			Path:        p.Patch,
-			RequestBody: annotation.Body,
-			Parameters:  getURLParameters(p.Patch),
-		}}
+		method, path = http.MethodPatch, p.Patch
 	case *annotations.HttpRule_Delete:
-		return []httpBinding{{
-			Method:      "DELETE",
-			Path:        p.Delete,
-			RequestBody: annotation.Body,
-			Parameters:  getURLParameters(p.Delete),
-		}}
+		method, path = http.MethodDelete, p.Delete
 	case *annotations.HttpRule_Custom:
-		return []httpBinding{{
-			Method:      p.Custom.GetKind(),
-			Path:        p.Custom.GetPath(),
-			RequestBody: annotation.Body,
-			Parameters:  getURLParameters(p.Custom.GetPath()),
-		}}
+		method, path = p.Custom.GetKind(), p.Custom.GetPath()
+	default:
+		panic(errors.New("unexpected Pattern type"))
 	}
 
-	return nil
+	return []Binding{{
+		Method:          method,
+		Path:            path, // todo: path from google.api.http annotation is not the same as mux path template, we should convert it correctly
+		RequestBody:     annotation.Body,
+		PathParameters:  getPathParameters(path),
+		QueryParameters: getQueryParameters(path, desc),
+	}}
 }
 
-func getURLParameters(path string) []string {
+// getPathParameters returns list of "variables" in path template
+func getPathParameters(path string) []string {
 	var params []string
 
 	parts := strings.Split(path, "/")
@@ -103,4 +88,40 @@ func getURLParameters(path string) []string {
 	}
 
 	return params
+}
+
+// getQueryParameters returns list of fields from method.Input which should be populated from query string
+// By definition query parameters are used for all fields which are not coming from path nor body
+func getQueryParameters(path string, desc *protogen.Method) (params []string) {
+	annotation, ok := getAnnotation(desc)
+	if !ok {
+		return
+	}
+
+	if annotation.Body == "*" { // body includes everything, query parameters are not needed
+		return
+	}
+
+	exclude := map[string]string{}
+
+	// exclude body param
+	if annotation.Body != "" {
+		exclude[annotation.Body] = annotation.Body
+	}
+
+	// exclude path params
+	for _, param := range getPathParameters(path) {
+		exclude[param] = param
+	}
+
+	for _, field := range desc.Input.Fields {
+		name := string(field.Desc.Name())
+		if _, ok := exclude[name]; ok {
+			continue
+		}
+
+		params = append(params, name)
+	}
+
+	return
 }

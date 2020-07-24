@@ -7,13 +7,14 @@ import (
 
 const (
 	httpPackage      = protogen.GoImportPath("net/http")
-	muxPackage       = protogen.GoImportPath("github.com/gorilla/mux")
 	jsonPackage      = protogen.GoImportPath("encoding/json")
 	ioutilPackage    = protogen.GoImportPath("io/ioutil")
 	protoPackage     = protogen.GoImportPath("google.golang.org/protobuf/proto")
 	protojsonPackage = protogen.GoImportPath("google.golang.org/protobuf/encoding/protojson")
 	statusPackage    = protogen.GoImportPath("google.golang.org/grpc/status")
 	codesPackage     = protogen.GoImportPath("google.golang.org/grpc/codes")
+	muxPackage       = protogen.GoImportPath("github.com/gorilla/mux")
+	schemaPackage    = protogen.GoImportPath("github.com/gorilla/schema")
 )
 
 // GenerateFile generates a _grpc.pb.go file containing gRPC service definitions.
@@ -52,7 +53,7 @@ func genService(gen *protogen.Plugin, file *protogen.File, g *protogen.Generated
 }
 
 func genServiceHelpers(gen *protogen.Plugin, file *protogen.File, g *protogen.GeneratedFile, service *protogen.Service) {
-	g.P("// _", service.GoName, "_HTTPReadRequestBody parses body to proto.Message")
+	g.P("// _", service.GoName, "_HTTPReadRequestBody parses body into proto.Message")
 	g.P("func _", service.GoName, "_HTTPReadRequestBody(r *", httpPackage.Ident("Request"), ", v ", protoPackage.Ident("Message"), ") error {")
 	g.P("    data, err := ", ioutilPackage.Ident("ReadAll"), "(r.Body)")
 	g.P("    if err != nil {")
@@ -133,7 +134,7 @@ func genServiceConstructor(gen *protogen.Plugin, file *protogen.File, g *protoge
 
 	for _, method := range service.Methods {
 		handler := fmt.Sprintf("_%v_%v_HTTP_Handler", service.GoName, method.GoName)
-		bindings := getHTTPBindings(method)
+		bindings := getBindings(method)
 
 		for _, binding := range bindings {
 			g.P("    router.Handle(", fmt.Sprintf("%#v", binding.Path), ", ", handler, "(srv)).Methods(", fmt.Sprintf("%#v", binding.Method), ")")
@@ -146,7 +147,7 @@ func genServiceConstructor(gen *protogen.Plugin, file *protogen.File, g *protoge
 
 func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.GeneratedFile, service *protogen.Service) {
 	for _, method := range service.Methods {
-		bindings := getHTTPBindings(method)
+		bindings := getBindings(method)
 
 		for _, binding := range bindings {
 			handler := fmt.Sprintf("_%v_%v_HTTP_Handler", service.GoName, method.GoName)
@@ -154,6 +155,25 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 			g.P()
 
 			g.P("func ", handler, "(srv ", service.GoName, "Server) ", httpPackage.Ident("Handler"), " {")
+
+			if len(binding.QueryParameters) != 0 {
+				g.P("type query struct {")
+				for _, param := range binding.QueryParameters {
+					field, ok := getMessageField(method.Input, param)
+					if !ok {
+						panic(fmt.Errorf("unable to resolve query parameter %#v in %#v", param, method.Input.Desc.FullName()))
+					}
+
+					if field.Enum != nil || field.Message != nil {
+						panic(fmt.Errorf("unable to resolve query parameters %#v in %#v: query parameters of type struct or enum are not supported", param, method.Input.Desc.FullName()))
+					}
+
+					g.P(field.GoName, " ", field.Desc.Kind(), fmt.Sprintf(" `schema:%#v`", param))
+				}
+				g.P("}")
+				g.P()
+			}
+
 			g.P("    return ", httpPackage.Ident("HandlerFunc"), "(func(w ", httpPackage.Ident("ResponseWriter"), ", r *", httpPackage.Ident("Request"), ") {")
 			g.P("		in := &", method.Input.GoIdent, "{}")
 
@@ -185,12 +205,34 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 				g.P("		}")
 			}
 
-			g.P()
+			// populate input from Query parameters
+			if len(binding.QueryParameters) != 0 {
+				g.P()
+				g.P("		decoder := ", schemaPackage.Ident("NewDecoder()"))
+				g.P("		decoder.IgnoreUnknownKeys(true)")
+				g.P()
+				g.P("		q := &query{}")
+				g.P("		if err := decoder.Decode(q, r.URL.Query()); err != nil {")
+				g.P("			_", service.GoName, "_HTTPWriteErrorResponse(w, err)")
+				g.P("			return")
+				g.P("		}")
+				g.P()
+
+				for _, name := range binding.QueryParameters {
+					field, ok := getMessageField(method.Input, name)
+					if !ok {
+						panic(fmt.Errorf("unable to resolve field %#v in %#v", name, method.Input.Desc.FullName()))
+					}
+
+					g.P("		in.", field.GoName, " = q.", field.GoName)
+				}
+			}
 
 			// populate input from URL parameters
-			if len(binding.Parameters) != 0 {
+			if len(binding.PathParameters) != 0 {
+				g.P()
 				g.P("		vars := ", muxPackage.Ident("Vars"), "(r)")
-				for _, name := range binding.Parameters {
+				for _, name := range binding.PathParameters {
 					field, ok := getMessageField(method.Input, name)
 					if !ok {
 						panic(fmt.Errorf("unable to resolve field %#v in %#v", name, method.Input.Desc.FullName()))
@@ -198,9 +240,9 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 
 					g.P("		in.", field.GoName, " = vars[", fmt.Sprintf("%#v", name), "]")
 				}
-
-				g.P()
 			}
+
+			g.P()
 
 			// call server method and write response
 			g.P("		out, err := srv.", method.GoName, "(r.Context(), in)")
