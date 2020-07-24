@@ -156,6 +156,7 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 
 			g.P("func ", handler, "(srv ", service.GoName, "Server) ", httpPackage.Ident("Handler"), " {")
 
+			// define query parameters struct
 			if len(binding.QueryParameters) != 0 {
 				g.P("type query struct {")
 				for _, param := range binding.QueryParameters {
@@ -172,8 +173,12 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 				}
 				g.P("}")
 				g.P()
+				g.P("decoder := ", schemaPackage.Ident("NewDecoder()"))
+				g.P("decoder.IgnoreUnknownKeys(true)")
+				g.P()
 			}
 
+			// beginning of the handler
 			g.P("    return ", httpPackage.Ident("HandlerFunc"), "(func(w ", httpPackage.Ident("ResponseWriter"), ", r *", httpPackage.Ident("Request"), ") {")
 			g.P("		in := &", method.Input.GoIdent, "{}")
 
@@ -186,6 +191,7 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 				// request body represents all arguments
 				g.P()
 				g.P("		if err := _", service.GoName, "_HTTPReadRequestBody(r, in); err != nil {")
+				g.P("			err = ", statusPackage.Ident("New"), "(", codesPackage.Ident("InvalidArgument"), ", err.Error()).Err()")
 				g.P("			_", service.GoName, "_HTTPWriteErrorResponse(w, err)")
 				g.P("			return")
 				g.P("		}")
@@ -200,6 +206,7 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 				g.P()
 				g.P("       in.", field.GoName, " = &", field.Message.GoIdent, "{}")
 				g.P("		if err := _", service.GoName, "_HTTPReadRequestBody(r, in.", field.GoName, "); err != nil {")
+				g.P("			err = ", statusPackage.Ident("New"), "(", codesPackage.Ident("InvalidArgument"), ", err.Error()).Err()")
 				g.P("			_", service.GoName, "_HTTPWriteErrorResponse(w, err)")
 				g.P("			return")
 				g.P("		}")
@@ -208,11 +215,9 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 			// populate input from Query parameters
 			if len(binding.QueryParameters) != 0 {
 				g.P()
-				g.P("		decoder := ", schemaPackage.Ident("NewDecoder()"))
-				g.P("		decoder.IgnoreUnknownKeys(true)")
-				g.P()
 				g.P("		q := &query{}")
 				g.P("		if err := decoder.Decode(q, r.URL.Query()); err != nil {")
+				g.P("			err = ", statusPackage.Ident("New"), "(", codesPackage.Ident("InvalidArgument"), ", err.Error()).Err()")
 				g.P("			_", service.GoName, "_HTTPWriteErrorResponse(w, err)")
 				g.P("			return")
 				g.P("		}")

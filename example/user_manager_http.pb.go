@@ -121,6 +121,7 @@ func _UserManager_CreateUser_HTTP_Handler(srv UserManagerServer) http.Handler {
 		in := &CreateUserInput{}
 
 		if err := _UserManager_HTTPReadRequestBody(r, in); err != nil {
+			err = status.New(codes.InvalidArgument, err.Error()).Err()
 			_UserManager_HTTPWriteErrorResponse(w, err)
 			return
 		}
@@ -160,14 +161,15 @@ func _UserManager_GetComments_HTTP_Handler(srv UserManagerServer) http.Handler {
 		Order  string `schema:"order"`
 	}
 
+	decoder := schema.NewDecoder()
+	decoder.IgnoreUnknownKeys(true)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		in := &GetCommentsInput{}
 
-		decoder := schema.NewDecoder()
-		decoder.IgnoreUnknownKeys(true)
-
 		q := &query{}
 		if err := decoder.Decode(q, r.URL.Query()); err != nil {
+			err = status.New(codes.InvalidArgument, err.Error()).Err()
 			_UserManager_HTTPWriteErrorResponse(w, err)
 			return
 		}
@@ -196,6 +198,7 @@ func _UserManager_CreateComment_HTTP_Handler(srv UserManagerServer) http.Handler
 
 		in.Comment = &Comment{}
 		if err := _UserManager_HTTPReadRequestBody(r, in.Comment); err != nil {
+			err = status.New(codes.InvalidArgument, err.Error()).Err()
 			_UserManager_HTTPWriteErrorResponse(w, err)
 			return
 		}
