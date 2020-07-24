@@ -257,7 +257,22 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 			g.P("			return")
 			g.P("		}")
 			g.P()
-			g.P("		_", service.GoName, "_HTTPWriteResponse(w, out)")
+
+			// write response
+			switch binding.ResponseBody {
+			case "*", "":
+				// everything in output is written to response
+				g.P("		_", service.GoName, "_HTTPWriteResponse(w, out)")
+			default:
+				// only one field from output is written to response
+				field, ok := getMessageField(method.Output, binding.ResponseBody)
+				if !ok {
+					panic(fmt.Errorf("unable to resolve field %#v in %#v", binding.RequestBody, method.Output.Desc.FullName()))
+				}
+
+				g.P("		_", service.GoName, "_HTTPWriteResponse(w, out.", field.GoName, ")")
+			}
+
 			g.P("    })")
 			g.P("}")
 		}

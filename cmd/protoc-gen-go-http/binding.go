@@ -35,6 +35,7 @@ type Binding struct {
 	PathParameters  []string // List of Path parameters (these coming from Path template)
 	QueryParameters []string // List of Query parameters
 	RequestBody     string   // Name of the field used for request body, or empty if no body is expected, or "*" if whole input is in body
+	ResponseBody    string   // Name of the field used in response body, or "*" if whole output is in body (empty defaults to "*")
 }
 
 // getBindings for a given Mathod
@@ -68,6 +69,7 @@ func getBindings(desc *protogen.Method) []Binding {
 		Method:          method,
 		Path:            path, // todo: path from google.api.http annotation is not the same as mux path template, we should convert it correctly
 		RequestBody:     annotation.Body,
+		ResponseBody:    annotation.ResponseBody,
 		PathParameters:  getPathParameters(path),
 		QueryParameters: getQueryParameters(path, desc),
 	}}
