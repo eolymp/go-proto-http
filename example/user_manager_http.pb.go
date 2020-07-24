@@ -155,10 +155,11 @@ func _UserManager_DeleteUser_HTTP_Handler(srv UserManagerServer) http.Handler {
 
 func _UserManager_GetComments_HTTP_Handler(srv UserManagerServer) http.Handler {
 	type query struct {
-		Offset int32  `schema:"offset"`
-		Size   int32  `schema:"size"`
-		Sort   string `schema:"sort"`
-		Order  string `schema:"order"`
+		Offset  int32    `schema:"offset"`
+		Size    int32    `schema:"size"`
+		Sort    string   `schema:"sort"`
+		Order   string   `schema:"order"`
+		Locales []string `schema:"locales"`
 	}
 
 	decoder := schema.NewDecoder()
@@ -178,6 +179,7 @@ func _UserManager_GetComments_HTTP_Handler(srv UserManagerServer) http.Handler {
 		in.Size = q.Size
 		in.Sort = q.Sort
 		in.Order = q.Order
+		in.Locales = q.Locales
 
 		vars := mux.Vars(r)
 		in.UserId = vars["user_id"]

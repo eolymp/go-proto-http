@@ -169,8 +169,9 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 						panic(fmt.Errorf("unable to resolve query parameters %#v in %#v: query parameters of type struct or enum are not supported", param, method.Input.Desc.FullName()))
 					}
 
-					g.P(field.GoName, " ", field.Desc.Kind(), fmt.Sprintf(" `schema:%#v`", param))
+					g.P(field.GoName, " ", GoType(field.Desc), fmt.Sprintf(" `schema:%#v`", param))
 				}
+
 				g.P("}")
 				g.P()
 				g.P("decoder := ", schemaPackage.Ident("NewDecoder()"))
