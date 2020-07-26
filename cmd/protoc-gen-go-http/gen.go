@@ -133,11 +133,10 @@ func genServiceConstructor(gen *protogen.Plugin, file *protogen.File, g *protoge
 	g.P("    router := ", muxPackage.Ident("NewRouter"), "()")
 
 	for _, method := range service.Methods {
-		handler := fmt.Sprintf("_%v_%v_HTTP_Handler", service.GoName, method.GoName)
 		bindings := getBindings(method)
 
-		for _, binding := range bindings {
-			g.P("    router.Handle(", fmt.Sprintf("%#v", binding.Path), ", ", handler, "(srv)).Methods(", fmt.Sprintf("%#v", binding.Method), ")")
+		for index, binding := range bindings {
+			g.P("    router.Handle(", fmt.Sprintf("%#v", binding.Path), ", ", getHandlerName(service, method, index), "(srv)).Methods(", fmt.Sprintf("%#v", binding.Method), ")")
 		}
 	}
 
@@ -149,12 +148,10 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 	for _, method := range service.Methods {
 		bindings := getBindings(method)
 
-		for _, binding := range bindings {
-			handler := fmt.Sprintf("_%v_%v_HTTP_Handler", service.GoName, method.GoName)
-
+		for index, binding := range bindings {
 			g.P()
 
-			g.P("func ", handler, "(srv ", service.GoName, "Server) ", httpPackage.Ident("Handler"), " {")
+			g.P("func ", getHandlerName(service, method, index), "(srv ", service.GoName, "Server) ", httpPackage.Ident("Handler"), " {")
 
 			// define query parameters struct
 			if len(binding.QueryParameters) != 0 {
@@ -277,6 +274,14 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 			g.P("}")
 		}
 	}
+}
+
+func getHandlerName(service *protogen.Service, method *protogen.Method, index int) string {
+	if index == 0 {
+		return fmt.Sprintf("_%v_%v_HTTP_Handler", service.GoName, method.GoName)
+	}
+
+	return fmt.Sprintf("_%v_%v_HTTP_Handler_%v", service.GoName, method.GoName, index-1)
 }
 
 func getMessageField(m *protogen.Message, name string) (*protogen.Field, bool) {

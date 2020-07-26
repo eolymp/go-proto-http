@@ -112,6 +112,7 @@ func NewUserManagerHandler(srv UserManagerServer) http.Handler {
 	router.Handle("/users", _UserManager_CreateUser_HTTP_Handler(srv)).Methods("POST")
 	router.Handle("/users/{user_id}", _UserManager_DeleteUser_HTTP_Handler(srv)).Methods("DELETE")
 	router.Handle("/users/{user_id}/comments", _UserManager_GetComments_HTTP_Handler(srv)).Methods("GET")
+	router.Handle("/comments", _UserManager_GetComments_HTTP_Handler_0(srv)).Methods("GET")
 	router.Handle("/users/{user_id}/comments", _UserManager_CreateComment_HTTP_Handler(srv)).Methods("POST")
 	return router
 }
@@ -183,6 +184,46 @@ func _UserManager_GetComments_HTTP_Handler(srv UserManagerServer) http.Handler {
 
 		vars := mux.Vars(r)
 		in.UserId = vars["user_id"]
+
+		out, err := srv.GetComments(r.Context(), in)
+		if err != nil {
+			_UserManager_HTTPWriteErrorResponse(w, err)
+			return
+		}
+
+		_UserManager_HTTPWriteResponse(w, out)
+	})
+}
+
+func _UserManager_GetComments_HTTP_Handler_0(srv UserManagerServer) http.Handler {
+	type query struct {
+		UserId  string   `schema:"user_id"`
+		Offset  int32    `schema:"offset"`
+		Size    int32    `schema:"size"`
+		Sort    string   `schema:"sort"`
+		Order   string   `schema:"order"`
+		Locales []string `schema:"locales"`
+	}
+
+	decoder := schema.NewDecoder()
+	decoder.IgnoreUnknownKeys(true)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		in := &GetCommentsInput{}
+
+		q := &query{}
+		if err := decoder.Decode(q, r.URL.Query()); err != nil {
+			err = status.New(codes.InvalidArgument, err.Error()).Err()
+			_UserManager_HTTPWriteErrorResponse(w, err)
+			return
+		}
+
+		in.UserId = q.UserId
+		in.Offset = q.Offset
+		in.Size = q.Size
+		in.Sort = q.Sort
+		in.Order = q.Order
+		in.Locales = q.Locales
 
 		out, err := srv.GetComments(r.Context(), in)
 		if err != nil {

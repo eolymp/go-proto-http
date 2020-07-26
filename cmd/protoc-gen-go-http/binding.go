@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func getAnnotation(method *protogen.Method) (*annotations.HttpRule, bool) {
+func getRuleForMethod(method *protogen.Method) (*annotations.HttpRule, bool) {
 	opts, ok := method.Desc.Options().(*descriptorpb.MethodOptions)
 	if !ok {
 		return nil, false
@@ -41,14 +41,18 @@ type Binding struct {
 // getBindings for a given Mathod
 // @todo: should also extract additionalBindings
 func getBindings(desc *protogen.Method) []Binding {
-	annotation, ok := getAnnotation(desc)
+	rule, ok := getRuleForMethod(desc)
 	if !ok {
 		return nil
 	}
 
+	return getBindingsByRule(desc, rule)
+}
+
+func getBindingsByRule(desc *protogen.Method, rule *annotations.HttpRule) []Binding {
 	var method, path string
 
-	switch p := annotation.Pattern.(type) {
+	switch p := rule.Pattern.(type) {
 	case *annotations.HttpRule_Get:
 		method, path = http.MethodGet, p.Get
 	case *annotations.HttpRule_Put:
@@ -65,14 +69,20 @@ func getBindings(desc *protogen.Method) []Binding {
 		panic(errors.New("unexpected Pattern type"))
 	}
 
-	return []Binding{{
+	bindings := []Binding{{
 		Method:          method,
 		Path:            path, // todo: path from google.api.http annotation is not the same as mux path template, we should convert it correctly
-		RequestBody:     annotation.Body,
-		ResponseBody:    annotation.ResponseBody,
+		RequestBody:     rule.Body,
+		ResponseBody:    rule.ResponseBody,
 		PathParameters:  getPathParameters(path),
 		QueryParameters: getQueryParameters(path, desc),
 	}}
+
+	for _, r := range rule.AdditionalBindings {
+		bindings = append(bindings, getBindingsByRule(desc, r)...)
+	}
+
+	return bindings
 }
 
 // getPathParameters returns list of "variables" in path template
@@ -95,7 +105,7 @@ func getPathParameters(path string) []string {
 // getQueryParameters returns list of fields from method.Input which should be populated from query string
 // By definition query parameters are used for all fields which are not coming from path nor body
 func getQueryParameters(path string, desc *protogen.Method) (params []string) {
-	annotation, ok := getAnnotation(desc)
+	annotation, ok := getRuleForMethod(desc)
 	if !ok {
 		return
 	}

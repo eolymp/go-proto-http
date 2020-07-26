@@ -10,6 +10,7 @@ Only few basic features of Google API HTTP annotations are supported at the mome
 - Simple request body parsing (no body, `body='*'` and `body='argument_name'`)
 - Basic query parameters of type: string, int, float
 - GRPC to HTTP status code mapping
+- Additional bindings (additional_binding annotation to define more than one HTTP binding)
 
 This code generator does not intend to generate perfect RESTful API (use all of the Status Codes, Headers, Query parameters, Content Type Negotiation etc). 
 The idea of this code generator is to provide "good enough" HTTP API on backed by the very same server implementation used by GRPC server, so you can have one 
