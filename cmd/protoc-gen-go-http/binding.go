@@ -17,6 +17,10 @@ func getRuleForMethod(method *protogen.Method) (*annotations.HttpRule, bool) {
 	}
 
 	ext, err := proto.GetExtension(opts, annotations.E_Http)
+	if err == proto.ErrMissingExtension {
+		return nil, false
+	}
+
 	if err != nil {
 		panic(err)
 	}
