@@ -79,7 +79,7 @@ func getBindingsByRule(desc *protogen.Method, rule *annotations.HttpRule) []Bind
 		RequestBody:     rule.Body,
 		ResponseBody:    rule.ResponseBody,
 		PathParameters:  getPathParameters(path),
-		QueryParameters: getQueryParameters(path, desc),
+		QueryParameters: getQueryParameters(path, rule, desc),
 	}}
 
 	for _, r := range rule.AdditionalBindings {
@@ -108,21 +108,16 @@ func getPathParameters(path string) []string {
 
 // getQueryParameters returns list of fields from method.Input which should be populated from query string
 // By definition query parameters are used for all fields which are not coming from path nor body
-func getQueryParameters(path string, desc *protogen.Method) (params []string) {
-	annotation, ok := getRuleForMethod(desc)
-	if !ok {
-		return
-	}
-
-	if annotation.Body == "*" { // body includes everything, query parameters are not needed
+func getQueryParameters(path string, rule *annotations.HttpRule, desc *protogen.Method) (params []string) {
+	if rule.Body == "*" { // body includes everything, query parameters are not needed
 		return
 	}
 
 	exclude := map[string]string{}
 
 	// exclude body param
-	if annotation.Body != "" {
-		exclude[annotation.Body] = annotation.Body
+	if rule.Body != "" {
+		exclude[rule.Body] = rule.Body
 	}
 
 	// exclude path params
