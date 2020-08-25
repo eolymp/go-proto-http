@@ -163,7 +163,7 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 					}
 
 					if field.Enum != nil || field.Message != nil {
-						panic(fmt.Errorf("unable to resolve query parameters %#v in %#v: query parameters of type struct or enum are not supported", param, method.Input.Desc.FullName()))
+						continue
 					}
 
 					g.P(field.GoName, " ", GoType(field.Desc), fmt.Sprintf(" `schema:%#v`", param))
@@ -225,6 +225,10 @@ func genServiceHandlers(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 					field, ok := getMessageField(method.Input, name)
 					if !ok {
 						panic(fmt.Errorf("unable to resolve field %#v in %#v", name, method.Input.Desc.FullName()))
+					}
+
+					if field.Enum != nil || field.Message != nil {
+						continue
 					}
 
 					g.P("		in.", field.GoName, " = q.", field.GoName)
