@@ -110,7 +110,6 @@ func genServiceHelpers(gen *protogen.Plugin, file *protogen.File, g *protogen.Ge
 	g.P("    data, err := ", protojsonPackage.Ident("Marshal"), "(s.Proto())")
 	g.P("    if err != nil {")
 	g.P("        panic(err)")
-	g.P("        return")
 	g.P("    }")
 	g.P()
 	g.P("    _, _ = w.Write(data)")

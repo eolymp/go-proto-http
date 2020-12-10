@@ -11,7 +11,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion6
+const _ = grpc.SupportPackageIsVersion7
 
 // UserManagerClient is the client API for UserManager service.
 //
@@ -82,21 +82,28 @@ type UserManagerServer interface {
 type UnimplementedUserManagerServer struct {
 }
 
-func (*UnimplementedUserManagerServer) CreateUser(context.Context, *CreateUserInput) (*CreateUserOutput, error) {
+func (UnimplementedUserManagerServer) CreateUser(context.Context, *CreateUserInput) (*CreateUserOutput, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
 }
-func (*UnimplementedUserManagerServer) DeleteUser(context.Context, *DeleteUserInput) (*DeleteUserOutput, error) {
+func (UnimplementedUserManagerServer) DeleteUser(context.Context, *DeleteUserInput) (*DeleteUserOutput, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
 }
-func (*UnimplementedUserManagerServer) GetComments(context.Context, *GetCommentsInput) (*GetCommentsOutput, error) {
+func (UnimplementedUserManagerServer) GetComments(context.Context, *GetCommentsInput) (*GetCommentsOutput, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetComments not implemented")
 }
-func (*UnimplementedUserManagerServer) CreateComment(context.Context, *CreateCommentInput) (*CreateCommentOutput, error) {
+func (UnimplementedUserManagerServer) CreateComment(context.Context, *CreateCommentInput) (*CreateCommentOutput, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateComment not implemented")
 }
-func (*UnimplementedUserManagerServer) mustEmbedUnimplementedUserManagerServer() {}
+func (UnimplementedUserManagerServer) mustEmbedUnimplementedUserManagerServer() {}
 
-func RegisterUserManagerServer(s *grpc.Server, srv UserManagerServer) {
+// UnsafeUserManagerServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to UserManagerServer will
+// result in compilation errors.
+type UnsafeUserManagerServer interface {
+	mustEmbedUnimplementedUserManagerServer()
+}
+
+func RegisterUserManagerServer(s grpc.ServiceRegistrar, srv UserManagerServer) {
 	s.RegisterService(&_UserManager_serviceDesc, srv)
 }
 

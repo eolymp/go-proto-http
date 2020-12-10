@@ -4,7 +4,6 @@
 package compete
 
 import (
-	json "encoding/json"
 	mux "github.com/gorilla/mux"
 	schema "github.com/gorilla/schema"
 	codes "google.golang.org/grpc/codes"
@@ -41,13 +40,6 @@ func _UserManager_HTTPWriteResponse(w http.ResponseWriter, v proto.Message) {
 	w.WriteHeader(http.StatusOK)
 
 	_, _ = w.Write(data)
-}
-
-// _UserManager_HTTPErrorParams keeps data structure for errors response
-type _UserManager_HTTPErrorParams struct {
-	Code    string        `json:"code,omitempty"`
-	Message string        `json:"error,omitempty"`
-	Details []interface{} `json:"details,omitempty"`
 }
 
 // _UserManager_HTTPWriteErrorResponse writes error to HTTP response with error status code
@@ -95,15 +87,12 @@ func _UserManager_HTTPWriteErrorResponse(w http.ResponseWriter, e error) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 
-	err := json.NewEncoder(w).Encode(&_UserManager_HTTPErrorParams{
-		Code:    s.Code().String(),
-		Message: s.Message(),
-		Details: s.Details(),
-	})
-
+	data, err := protojson.Marshal(s.Proto())
 	if err != nil {
 		panic(err)
 	}
+
+	_, _ = w.Write(data)
 }
 
 // NewUserManagerHandler constructs new http.Handler for UserManagerServer
