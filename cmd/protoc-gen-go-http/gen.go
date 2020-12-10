@@ -7,7 +7,6 @@ import (
 
 const (
 	httpPackage      = protogen.GoImportPath("net/http")
-	jsonPackage      = protogen.GoImportPath("encoding/json")
 	ioutilPackage    = protogen.GoImportPath("io/ioutil")
 	protoPackage     = protogen.GoImportPath("google.golang.org/protobuf/proto")
 	protojsonPackage = protogen.GoImportPath("google.golang.org/protobuf/encoding/protojson")
@@ -81,13 +80,6 @@ func genServiceHelpers(gen *protogen.Plugin, file *protogen.File, g *protogen.Ge
 	g.P("    _, _ = w.Write(data)")
 	g.P("}")
 
-	g.P("// _", service.GoName, "_HTTPErrorParams keeps data structure for errors response")
-	g.P("type _", service.GoName, "_HTTPErrorParams struct {")
-	g.P("    Code string `json:\"code,omitempty\"`")
-	g.P("    Message string `json:\"error,omitempty\"`")
-	g.P("    Details []interface{} `json:\"details,omitempty\"`")
-	g.P("}")
-
 	g.P("// _", service.GoName, "_HTTPWriteErrorResponse writes error to HTTP response with error status code")
 	g.P("func _", service.GoName, "_HTTPWriteErrorResponse(w ", httpPackage.Ident("ResponseWriter"), ", e error) {")
 	g.P("    s := ", statusPackage.Ident("Convert"), "(e)")
@@ -115,15 +107,13 @@ func genServiceHelpers(gen *protogen.Plugin, file *protogen.File, g *protogen.Ge
 	g.P("    default: w.WriteHeader(", httpPackage.Ident("StatusInternalServerError"), ")")
 	g.P("    }")
 	g.P()
-	g.P("    err := ", jsonPackage.Ident("NewEncoder"), "(w).Encode(&_", service.GoName, "_HTTPErrorParams{")
-	g.P("        Code: s.Code().String(),")
-	g.P("        Message: s.Message(),")
-	g.P("        Details: s.Details(),")
-	g.P("    })")
-	g.P()
+	g.P("    data, err := ", protojsonPackage.Ident("Marshal"), "(s.Proto())")
 	g.P("    if err != nil {")
 	g.P("        panic(err)")
-	g.P("     }")
+	g.P("        return")
+	g.P("    }")
+	g.P()
+	g.P("    _, _ = w.Write(data)")
 	g.P("}")
 }
 
